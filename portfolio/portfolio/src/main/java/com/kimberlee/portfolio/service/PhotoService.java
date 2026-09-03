@@ -1,6 +1,7 @@
 package com.kimberlee.portfolio.service;
 
 import com.kimberlee.portfolio.entity.Photo;
+import com.kimberlee.portfolio.exception.NotFoundException;
 import com.kimberlee.portfolio.repository.PhotoRepository;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +21,8 @@ public class PhotoService {
     }
 
     public Photo getPhotoById(Long id) {
-        return photoRepository.findById(id).orElse(null);
+        return photoRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("No photo with id " + id));
     }
 
     public Photo savePhoto(Photo photo) {

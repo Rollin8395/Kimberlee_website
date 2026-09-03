@@ -1,177 +1,146 @@
 "use client";
+
 import { useState } from "react";
+import { sendContactMessage } from "@/lib/api";
+
+const INQUIRY_TYPES = [
+  "Booking Inquiry",
+  "Custom Content",
+  "Brand Collaboration",
+  "General",
+];
 
 export default function Contact() {
-  const [form, setForm] = useState({ name: "", email: "", message: "" });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    subject: INQUIRY_TYPES[0],
+    message: "",
+  });
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
-
-  const inputStyle = {
-    width: "100%",
-    background: "rgba(201,168,76,0.04)",
-    border: "0.5px solid rgba(201,168,76,0.2)",
-    borderRadius: 1,
-    padding: "14px 18px",
-    fontFamily: "var(--font-body)",
-    fontSize: 12,
-    letterSpacing: "0.06em",
-    color: "var(--gold-light)",
-    outline: "none",
-    transition: "border-color 0.2s",
-  } as React.CSSProperties;
+  const [statusMsg, setStatusMsg] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus("sending");
-    try {
-      await fetch("http://localhost:8080/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
+    setStatusMsg("");
+
+    const res = await sendContactMessage({
+      name: form.name,
+      email: form.email,
+      inquiryType: form.subject,
+      message: form.message,
+    });
+    if (res.success) {
       setStatus("sent");
-      setForm({ name: "", email: "", message: "" });
-    } catch {
+      setStatusMsg(res.message);
+      setForm({ name: "", email: "", subject: INQUIRY_TYPES[0], message: "" });
+    } else {
       setStatus("error");
+      setStatusMsg(res.message || "Failed to send. Please try again.");
     }
   };
 
   return (
-    <section
-      id="contact"
-      style={{
-        padding: "96px 0",
-        background: "#050402",
-        borderTop: "0.5px solid rgba(201,168,76,0.12)",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
-      {/* Background ornament */}
-      <div style={{
-        position: "absolute", top: 40, right: 40,
-        width: 120, height: 120,
-        border: "0.5px solid rgba(201,168,76,0.08)",
-        borderRadius: "50%",
-        pointerEvents: "none",
-      }} />
-      <div style={{
-        position: "absolute", bottom: 40, left: 40,
-        width: 80, height: 80,
-        border: "0.5px solid rgba(201,168,76,0.08)",
-        pointerEvents: "none",
-      }} />
-
-      <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 48px", position: "relative", zIndex: 2 }}>
-
-        {/* Eyebrow */}
-        <div style={{
-          fontFamily: "var(--font-body)",
-          fontSize: 10, fontWeight: 500,
-          letterSpacing: "0.32em",
-          textTransform: "uppercase",
-          color: "var(--gold)",
-          display: "flex", alignItems: "center", gap: 14,
-          marginBottom: 20,
-        }}>
-          <span style={{ width: 28, height: "0.5px", background: "var(--gold)", display: "block", flexShrink: 0 }} />
-          Contact
+    <section id="contact" className="bg-[#070503] py-28 sm:py-36 overflow-hidden">
+      <div className="max-w-2xl mx-auto px-6 sm:px-12 relative z-10">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h2 className="font-display text-4xl sm:text-5xl font-light text-[#f5eed6] tracking-wide mb-3">
+            Direct <em className="text-[#c9a84c] italic font-normal">Contact</em>
+          </h2>
+          <p className="text-sm text-[#6d5b38]">
+            Bookings, collaborations &amp; VIP inquiries. All correspondence discreet.
+          </p>
         </div>
 
-        <h2 style={{
-          fontFamily: "var(--font-display)",
-          fontSize: "clamp(36px, 4vw, 52px)",
-          fontWeight: 300,
-          color: "var(--text-primary)",
-          letterSpacing: "0.02em",
-          marginBottom: 12,
-        }}>
-          Begin Your <em style={{ color: "var(--gold)", fontStyle: "italic" }}>Enquiry</em>
-        </h2>
+        {/* Contact Form */}
+        <div className="bg-[#0c0905] border border-[#c9a84c]/10 rounded-xl p-6 sm:p-8">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] uppercase tracking-[0.15em] text-[#6d5b38] font-medium mb-2">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Your name"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="w-full bg-[#140e06] border border-[#c9a84c]/10 focus:border-[#c9a84c]/40 rounded-lg px-4 py-3 text-sm text-[#f5eed6] placeholder-[#4a3e28] outline-none transition-colors duration-300"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase tracking-[0.15em] text-[#6d5b38] font-medium mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="your@email.com"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className="w-full bg-[#140e06] border border-[#c9a84c]/10 focus:border-[#c9a84c]/40 rounded-lg px-4 py-3 text-sm text-[#f5eed6] placeholder-[#4a3e28] outline-none transition-colors duration-300"
+                />
+              </div>
+            </div>
 
-        <p style={{
-          fontFamily: "var(--font-body)",
-          fontSize: 12, lineHeight: 2,
-          color: "var(--text-muted)",
-          letterSpacing: "0.06em",
-          marginBottom: 48,
-        }}>
-          All messages are treated with complete discretion and confidentiality.
-        </p>
+            <div>
+              <label className="block text-[10px] uppercase tracking-[0.15em] text-[#6d5b38] font-medium mb-2">
+                Inquiry
+              </label>
+              <select
+                value={form.subject}
+                onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                className="w-full bg-[#140e06] border border-[#c9a84c]/10 focus:border-[#c9a84c]/40 rounded-lg px-4 py-3 text-sm text-[#f5eed6] outline-none transition-colors duration-300 cursor-pointer"
+              >
+                {INQUIRY_TYPES.map((type) => (
+                  <option key={type} value={type} className="bg-[#0e0a06] text-[#f5eed6]">
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <input
-            type="text"
-            placeholder="Your Name"
-            required
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            style={inputStyle}
-            onFocus={(e) => (e.target.style.borderColor = "rgba(201,168,76,0.5)")}
-            onBlur={(e) => (e.target.style.borderColor = "rgba(201,168,76,0.2)")}
-          />
-          <input
-            type="email"
-            placeholder="Email Address"
-            required
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            style={inputStyle}
-            onFocus={(e) => (e.target.style.borderColor = "rgba(201,168,76,0.5)")}
-            onBlur={(e) => (e.target.style.borderColor = "rgba(201,168,76,0.2)")}
-          />
-          <textarea
-            rows={6}
-            placeholder="Your Message"
-            required
-            value={form.message}
-            onChange={(e) => setForm({ ...form, message: e.target.value })}
-            style={{ ...inputStyle, resize: "vertical", minHeight: 140 }}
-            onFocus={(e) => (e.target.style.borderColor = "rgba(201,168,76,0.5)")}
-            onBlur={(e) => (e.target.style.borderColor = "rgba(201,168,76,0.2)")}
-          />
+            <div>
+              <label className="block text-[10px] uppercase tracking-[0.15em] text-[#6d5b38] font-medium mb-2">
+                Message
+              </label>
+              <textarea
+                rows={3}
+                required
+                placeholder="Details, dates, concept..."
+                value={form.message}
+                onChange={(e) => setForm({ ...form, message: e.target.value })}
+                className="w-full bg-[#140e06] border border-[#c9a84c]/10 focus:border-[#c9a84c]/40 rounded-lg px-4 py-3 text-sm text-[#f5eed6] placeholder-[#4a3e28] outline-none transition-colors duration-300 resize-y min-h-[90px]"
+              />
+            </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 20, marginTop: 8 }}>
-            <button
-              type="submit"
-              disabled={status === "sending"}
-              style={{
-                fontFamily: "var(--font-body)",
-                fontSize: 10, fontWeight: 500,
-                letterSpacing: "0.22em",
-                textTransform: "uppercase",
-                color: "var(--bg-base)",
-                background: status === "sending" ? "var(--gold-dim)" : "var(--gold)",
-                padding: "14px 36px",
-                border: "none",
-                borderRadius: 1,
-                cursor: status === "sending" ? "not-allowed" : "pointer",
-                transition: "background 0.2s",
-              }}
-            >
-              {status === "sending" ? "Sending…" : "Send Message"}
-            </button>
+            {/* Discretion notice */}
+            <div className="text-[10px] text-[#5a4a2e] text-center">
+              100% discretion. Your information is never shared.
+            </div>
 
-            {status === "sent" && (
-              <span style={{
-                fontFamily: "var(--font-body)",
-                fontSize: 11, letterSpacing: "0.1em",
-                color: "var(--gold-dim)",
-                fontStyle: "italic",
-              }}>
-                ✓ Message received — thank you.
-              </span>
-            )}
-            {status === "error" && (
-              <span style={{
-                fontFamily: "var(--font-body)",
-                fontSize: 11, letterSpacing: "0.1em",
-                color: "#c0504a",
-              }}>
-                Something went wrong. Please try again.
-              </span>
-            )}
-          </div>
-        </form>
+            {/* Submit & Status */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+              <button
+                type="submit"
+                disabled={status === "sending"}
+                className="w-full sm:w-auto px-7 py-3 rounded-sm bg-[#c9a84c] hover:bg-[#e8d5a3] disabled:opacity-50 text-[#070503] font-semibold text-[10px] uppercase tracking-[0.2em] transition-colors duration-300 cursor-pointer"
+              >
+                {status === "sending" ? "Sending..." : "Send Message"}
+              </button>
+
+              {status === "sent" && (
+                <span className="text-xs text-[#c9a84c]">{statusMsg || "Sent!"}</span>
+              )}
+              {status === "error" && (
+                <span className="text-xs text-[#c0504a]">{statusMsg}</span>
+              )}
+            </div>
+          </form>
+        </div>
       </div>
     </section>
   );

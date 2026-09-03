@@ -1,259 +1,433 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
+import { motion, AnimatePresence } from "motion/react";
+import { getPhotos, Photo } from "@/lib/api";
 
-type Photo = {
-  id: number;
-  imageUrl: string;
-  title: string;
-  category?: string;
-};
-
-// Fallback placeholder photos shown while API loads or if it fails
-const PLACEHOLDERS: Photo[] = [
-  { id: -1, imageUrl: "https://preview.redd.it/7ysnbxcdzd8g1.jpg?width=871&format=pjpg&auto=webp&s=a795747bb2110de9e6d9f64763dd710702095b53", title: "Glamour", category: "Fashion" },
-  { id: -2, imageUrl: "https://preview.redd.it/5ro0ivenx6ea1.jpg?auto=webp&s=d6146b52b64cd1b88317fdfbeae8fc72ad279287", title: "Lifestyle", category: "Travel" },
-  { id: -3, imageUrl: "https://preview.redd.it/7ysnbxcdzd8g1.jpg?width=871&format=pjpg&auto=webp&s=a795747bb2110de9e6d9f64763dd710702095b53", title: "Portrait", category: "Glamour" },
-  { id: -4, imageUrl: "https://preview.redd.it/5ro0ivenx6ea1.jpg?auto=webp&s=d6146b52b64cd1b88317fdfbeae8fc72ad279287", title: "Editorial", category: "Fashion" },
-  { id: -5, imageUrl: "https://preview.redd.it/7ysnbxcdzd8g1.jpg?width=871&format=pjpg&auto=webp&s=a795747bb2110de9e6d9f64763dd710702095b53", title: "Travel", category: "Travel" },
-  { id: -6, imageUrl: "https://preview.redd.it/5ro0ivenx6ea1.jpg?auto=webp&s=d6146b52b64cd1b88317fdfbeae8fc72ad279287", title: "Evening", category: "Lifestyle" },
-];
+const CATEGORIES = ["All", "Glamour", "VIP"];
 
 export default function GalleryPreview() {
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [activeCategory, setActiveCategory] = useState("All");
   const [loading, setLoading] = useState(true);
-  const [lightbox, setLightbox] = useState<Photo | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  /* =========================
+     LOAD FROM BACKEND
+  ========================= */
 
   useEffect(() => {
-    fetch("http://localhost:8080/api/photos")
-      .then((res) => res.json())
-      .then((data) => {
-        setPhotos(data.length ? data : PLACEHOLDERS);
-        setLoading(false);
-      })
-      .catch(() => {
-        setPhotos(PLACEHOLDERS);
-        setLoading(false);
-      });
+  let mounted = true;
+
+  const loadPhotos = async () => {
+    try {
+      console.log("LOADING PHOTOS...");
+
+      const data = await getPhotos();
+
+      console.log("PHOTOS RECEIVED:", data);
+
+      if (!mounted) return;
+
+      setPhotos(data);
+      setLoading(false);
+    } catch (error) {
+      console.error("FAILED TO LOAD PHOTOS:", error);
+
+      if (!mounted) return;
+
+      setPhotos([]);
+      setLoading(false);
+    }
+  };
+
+  loadPhotos();
+
+  return () => {
+    mounted = false;
+  };
+}, []);
+
+  /* =========================
+     CATEGORY FILTER
+  ========================= */
+
+  const filteredPhotos =
+    activeCategory === "All"
+      ? photos
+      : photos.filter(
+          (photo) =>
+            photo.category?.toLowerCase() ===
+            activeCategory.toLowerCase()
+        );
+
+  const displayPhotos = filteredPhotos.slice(0, 6);
+
+  /* =========================
+     LIGHTBOX
+  ========================= */
+
+  const closeLightbox = useCallback(() => {
+    setLightboxIndex(null);
   }, []);
 
-  // Close lightbox on Escape
+  const nextPhoto = useCallback(() => {
+    if (
+      lightboxIndex === null ||
+      displayPhotos.length === 0
+    ) {
+      return;
+    }
+
+    setLightboxIndex(
+      (lightboxIndex + 1) % displayPhotos.length
+    );
+  }, [lightboxIndex, displayPhotos.length]);
+
+  const prevPhoto = useCallback(() => {
+    if (
+      lightboxIndex === null ||
+      displayPhotos.length === 0
+    ) {
+      return;
+    }
+
+    setLightboxIndex(
+      (lightboxIndex - 1 + displayPhotos.length) %
+        displayPhotos.length
+    );
+  }, [lightboxIndex, displayPhotos.length]);
+
+  /* =========================
+     KEYBOARD
+  ========================= */
+
   useEffect(() => {
-    const fn = (e: KeyboardEvent) => { if (e.key === "Escape") setLightbox(null); };
-    window.addEventListener("keydown", fn);
-    return () => window.removeEventListener("keydown", fn);
-  }, []);
+    if (lightboxIndex === null) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeLightbox();
+      if (e.key === "ArrowRight") nextPhoto();
+      if (e.key === "ArrowLeft") prevPhoto();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [
+    lightboxIndex,
+    closeLightbox,
+    nextPhoto,
+    prevPhoto,
+  ]);
+
+  const currentPhoto =
+    lightboxIndex !== null
+      ? displayPhotos[lightboxIndex]
+      : null;
 
   return (
     <>
       <section
         id="gallery"
-        style={{
-          background: "var(--bg-base)",
-          borderTop: "0.5px solid rgba(201,168,76,0.12)",
-          padding: "96px 0",
-        }}
+        className="relative w-full bg-[#070503] py-28 sm:py-36 overflow-hidden"
       >
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 48px" }}>
+        {/* Background atmosphere */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-[#c9a84c]/[0.025] blur-[150px]" />
+        </div>
 
-          {/* Header */}
-          <div style={{ marginBottom: 52 }}>
-            <div style={{
-              fontFamily: "var(--font-body)",
-              fontSize: 10, fontWeight: 500,
-              letterSpacing: "0.32em",
-              textTransform: "uppercase",
-              color: "var(--gold)",
-              display: "flex", alignItems: "center", gap: 14,
-              marginBottom: 20,
-            }}>
-              <span style={{ width: 28, height: "0.5px", background: "var(--gold)", display: "block" }} />
-              Portfolio
-            </div>
-            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
-              <h2 style={{
-                fontFamily: "var(--font-display)",
-                fontSize: "clamp(36px, 4vw, 52px)",
-                fontWeight: 300,
-                color: "var(--text-primary)",
-                letterSpacing: "0.02em",
-                lineHeight: 1.1,
-              }}>
-                A Glimpse of{" "}
-                <em style={{ color: "var(--gold)", fontStyle: "italic" }}>Kimberlee</em>
-              </h2>
-              <a href="/gallery" style={{
-                fontFamily: "var(--font-body)",
-                fontSize: 10, fontWeight: 400,
-                letterSpacing: "0.22em",
-                textTransform: "uppercase",
-                color: "var(--gold-dim)",
-                textDecoration: "none",
-                borderBottom: "0.5px solid rgba(201,168,76,0.3)",
-                paddingBottom: 2,
-                transition: "color 0.2s",
-              }}
-              onMouseEnter={(e) => ((e.target as HTMLElement).style.color = "var(--gold)")}
-              onMouseLeave={(e) => ((e.target as HTMLElement).style.color = "var(--gold-dim)")}
-              >
-                View Full Gallery →
-              </a>
+        <div className="relative z-10 w-full flex flex-col items-center px-6">
+
+          {/* HEADER */}
+          <div className="w-full max-w-4xl mx-auto text-center mb-12">
+            <p className="text-[9px] sm:text-[10px] uppercase tracking-[0.4em] text-[#6d5b38] mb-4">
+              Selected Collection
+            </p>
+
+            <h2 className="font-display text-5xl sm:text-6xl lg:text-7xl font-light uppercase tracking-wide text-[#f5eed6] mb-4">
+              <em className="text-[#c9a84c] italic font-normal">
+                Gallery
+              </em>
+            </h2>
+
+            <Link
+              href="/gallery"
+              className="inline-block text-[10px] uppercase tracking-[0.25em] text-[#c9a84c] hover:text-[#e8d5a3] transition-colors duration-300"
+            >
+              View All ({photos.length})
+            </Link>
+          </div>
+
+          {/* CATEGORIES */}
+          <div className="w-full max-w-6xl mx-auto mb-14">
+            <div className="flex flex-wrap justify-center items-center gap-x-8 gap-y-4">
+              {CATEGORIES.map((category) => {
+                const active = activeCategory === category;
+
+                return (
+                  <button
+                    key={category}
+                    type="button"
+                    onClick={() => setActiveCategory(category)}
+                    className={`
+                      relative
+                      pb-2
+                      text-[9px]
+                      sm:text-[10px]
+                      uppercase
+                      tracking-[0.2em]
+                      transition-colors
+                      duration-300
+                      cursor-pointer
+                      ${
+                        active
+                          ? "text-[#c9a84c]"
+                          : "text-[#6d5b38] hover:text-[#a99368]"
+                      }
+                    `}
+                  >
+                    {category}
+
+                    {active && (
+                      <motion.span
+                        layoutId="gallery-category"
+                        className="absolute left-0 right-0 bottom-0 h-px bg-[#c9a84c]"
+                      />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Loading skeleton */}
-          {loading && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-              {[...Array(6)].map((_, i) => (
-                <div key={i} style={{
-                  height: 420,
-                  background: "var(--bg-card)",
-                  animation: "pulse 1.8s ease-in-out infinite",
-                  animationDelay: `${i * 0.1}s`,
-                }} />
-              ))}
-            </div>
-          )}
+          {/* PHOTOS */}
+          <div className="w-full max-w-7xl mx-auto">
 
-          {/* Masonry-style grid */}
-          {!loading && (
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: 10,
-            }} className="gallery-grid">
-              {photos.slice(0, 6).map((photo, i) => (
-                <div
-                  key={photo.id}
-                  onClick={() => setLightbox(photo)}
-                  style={{
-                    position: "relative",
-                    overflow: "hidden",
-                    cursor: "pointer",
-                    border: "0.5px solid rgba(201,168,76,0.08)",
-                    // Stagger heights for visual rhythm
-                    gridRow: i === 0 ? "span 2" : "span 1",
-                  }}
-                  className="gallery-item"
-                >
-                  <img
-                    src={photo.imageUrl}
-                    alt={photo.title}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      minHeight: i === 0 ? 560 : 270,
-                      objectFit: "cover",
-                      objectPosition: "center top",
-                      display: "block",
-                      transition: "transform 0.6s cubic-bezier(0.16,1,0.3,1), filter 0.4s",
-                    }}
-                    className="gallery-img"
+            {loading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {[1, 2, 3, 4, 5, 6].map((item) => (
+                  <div
+                    key={item}
+                    className="aspect-[4/5] bg-[#0d0a06] animate-pulse"
                   />
-                  {/* Hover overlay */}
-                  <div className="gallery-overlay" style={{
-                    position: "absolute", inset: 0,
-                    background: "linear-gradient(to top, rgba(10,8,5,0.85) 0%, transparent 50%)",
-                    opacity: 0,
-                    transition: "opacity 0.3s",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "flex-end",
-                    padding: 20,
-                  }}>
-                    {photo.category && (
-                      <span style={{
-                        fontFamily: "var(--font-body)",
-                        fontSize: 9, letterSpacing: "0.22em",
-                        textTransform: "uppercase",
-                        color: "var(--gold)",
-                        border: "0.5px solid rgba(201,168,76,0.5)",
-                        padding: "4px 10px",
-                        display: "inline-block",
-                        marginBottom: 8,
-                        width: "fit-content",
-                      }}>
-                        {photo.category}
-                      </span>
-                    )}
-                    <p style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: 18, fontStyle: "italic",
-                      color: "var(--gold-light)",
-                      letterSpacing: "0.04em",
-                    }}>
-                      {photo.title}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            ) : displayPhotos.length > 0 ? (
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-12">
+
+                {displayPhotos.map((photo, index) => (
+                  <motion.button
+                    key={photo.id}
+                    type="button"
+                    onClick={() => setLightboxIndex(index)}
+                    initial={{
+                      opacity: 0,
+                      y: 40,
+                    }}
+                    whileInView={{
+                      opacity: 1,
+                      y: 0,
+                    }}
+                    viewport={{
+                      once: true,
+                      amount: 0.1,
+                    }}
+                    transition={{
+                      duration: 0.8,
+                      delay: index * 0.08,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
+                    className="group relative text-left cursor-pointer"
+                  >
+                    <div className="relative aspect-[4/5] overflow-hidden bg-[#0d0a06]">
+
+                      {/* IMAGE */}
+                      <img
+                        src={photo.imageUrl}
+                        alt={photo.title}
+                        loading="lazy"
+                        className="w-full h-full object-cover transition-transform duration-[1400ms] ease-out group-hover:scale-[1.06]"
+                        onLoad={() => {
+                          console.log(
+                            "IMAGE LOADED:",
+                            photo.imageUrl
+                          );
+                        }}
+                        onError={(e) => {
+                          console.error(
+                            "IMAGE FAILED:",
+                            photo.imageUrl
+                          );
+
+                          e.currentTarget.style.opacity = "0";
+                        }}
+                      />
+
+                      {/* Gradient */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#070503] via-transparent to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-700" />
+
+                      {/* Hover glow */}
+                      <div className="absolute inset-0 bg-[#c9a84c]/[0.04] opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+
+                      {/* Center plus */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-14 h-14 rounded-full border border-[#f5eed6]/50 bg-[#070503]/30 backdrop-blur-sm flex items-center justify-center text-[#f5eed6] text-xl opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100 transition-all duration-500">
+                          +
+                        </div>
+                      </div>
+
+                      {/* Caption */}
+                      <div className="absolute bottom-0 left-0 right-0 p-6">
+
+                        {photo.category && (
+                          <p className="text-[9px] uppercase tracking-[0.25em] text-[#c9a84c] mb-2 opacity-0 translate-y-3 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500">
+                            {photo.category}
+                          </p>
+                        )}
+
+                        <h3 className="font-display text-xl sm:text-2xl font-light italic text-[#f5eed6]">
+                          {photo.title}
+                        </h3>
+
+                      </div>
+                    </div>
+                  </motion.button>
+                ))}
+
+              </div>
+
+            ) : (
+
+              <div className="py-20 text-center">
+                <p className="text-[10px] uppercase tracking-[0.25em] text-[#6d5b38]">
+                  No images available
+                </p>
+              </div>
+
+            )}
+
+          </div>
+
+          {/* BOTTOM LINK */}
+          <div className="mt-16 text-center">
+            <Link
+              href="/gallery"
+              className="inline-flex items-center gap-4 text-[10px] uppercase tracking-[0.25em] text-[#c9a84c] hover:text-[#e8d5a3] transition-colors duration-300"
+            >
+              Explore Full Gallery
+              <span className="text-base">→</span>
+            </Link>
+          </div>
+
         </div>
       </section>
 
-      {/* Lightbox */}
-      {lightbox && (
-        <div
-          onClick={() => setLightbox(null)}
-          style={{
-            position: "fixed", inset: 0, zIndex: 999,
-            background: "rgba(5,4,2,0.95)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "zoom-out",
-          }}
-        >
-          <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", maxWidth: "85vw", maxHeight: "90vh" }}>
-            <img
-              src={lightbox.imageUrl}
-              alt={lightbox.title}
-              style={{ maxWidth: "85vw", maxHeight: "88vh", objectFit: "contain", display: "block" }}
-            />
-            <button
-              onClick={() => setLightbox(null)}
-              style={{
-                position: "absolute", top: -16, right: -16,
-                background: "var(--gold)",
-                border: "none",
-                width: 36, height: 36,
-                borderRadius: "50%",
-                color: "var(--bg-base)",
-                fontSize: 16,
-                cursor: "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontFamily: "var(--font-body)",
+      {/* LIGHTBOX */}
+      <AnimatePresence>
+        {currentPhoto && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={closeLightbox}
+            className="fixed inset-0 z-50 bg-[#050402]/95 backdrop-blur-2xl flex items-center justify-center p-4 sm:p-8"
+          >
+            <motion.div
+              initial={{
+                opacity: 0,
+                scale: 0.95,
               }}
+              animate={{
+                opacity: 1,
+                scale: 1,
+              }}
+              exit={{
+                opacity: 0,
+                scale: 0.97,
+              }}
+              transition={{ duration: 0.4 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-6xl max-h-[92vh] flex flex-col items-center"
             >
-              ✕
-            </button>
-            <p style={{
-              position: "absolute", bottom: -28, left: 0,
-              fontFamily: "var(--font-display)",
-              fontSize: 14, fontStyle: "italic",
-              color: "var(--gold-dim)",
-              letterSpacing: "0.06em",
-            }}>
-              {lightbox.title}
-            </p>
-          </div>
-        </div>
-      )}
 
-      <style>{`
-        .gallery-item:hover .gallery-overlay { opacity: 1 !important; }
-        .gallery-item:hover .gallery-img     { transform: scale(1.04); filter: brightness(0.88); }
-        @keyframes pulse {
-          0%, 100% { opacity: 0.4; }
-          50%       { opacity: 0.7; }
-        }
-        @media (max-width: 768px) {
-          .gallery-grid { grid-template-columns: repeat(2, 1fr) !important; }
-          .gallery-grid > div:first-child { grid-row: span 1 !important; }
-        }
-        @media (max-width: 480px) {
-          .gallery-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
+              {/* CLOSE */}
+              <button
+                type="button"
+                onClick={closeLightbox}
+                className="absolute -top-12 right-0 sm:-right-4 w-10 h-10 rounded-full bg-white/5 hover:bg-[#c9a84c] text-[#c9a84c] hover:text-[#070503] border border-white/10 flex items-center justify-center transition-all duration-300 z-10"
+              >
+                ×
+              </button>
+
+              {/* PREVIOUS */}
+              {displayPhotos.length > 1 && (
+                <button
+                  type="button"
+                  onClick={prevPhoto}
+                  className="absolute left-2 sm:-left-16 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/5 hover:bg-[#c9a84c] text-[#c9a84c] hover:text-[#070503] border border-white/10 flex items-center justify-center text-xl transition-all duration-300 z-10"
+                >
+                  ‹
+                </button>
+              )}
+
+              {/* NEXT */}
+              {displayPhotos.length > 1 && (
+                <button
+                  type="button"
+                  onClick={nextPhoto}
+                  className="absolute right-2 sm:-right-16 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/5 hover:bg-[#c9a84c] text-[#c9a84c] hover:text-[#070503] border border-white/10 flex items-center justify-center text-xl transition-all duration-300 z-10"
+                >
+                  ›
+                </button>
+              )}
+
+              {/* LIGHTBOX IMAGE */}
+              <motion.img
+                key={currentPhoto.imageUrl}
+                src={currentPhoto.imageUrl}
+                alt={currentPhoto.title}
+                initial={{
+                  opacity: 0,
+                  scale: 0.97,
+                }}
+                animate={{
+                  opacity: 1,
+                  scale: 1,
+                }}
+                transition={{ duration: 0.4 }}
+                className="max-h-[75vh] w-auto max-w-[90vw] object-contain"
+                onError={() => {
+                  console.error(
+                    "LIGHTBOX IMAGE FAILED:",
+                    currentPhoto.imageUrl
+                  );
+                }}
+              />
+
+              {/* CAPTION */}
+              <div className="mt-5 text-center">
+                <h3 className="font-display text-xl sm:text-2xl text-[#f5eed6] font-light italic">
+                  {currentPhoto.title}
+                </h3>
+
+                {currentPhoto.category && (
+                  <p className="text-[9px] uppercase tracking-[0.25em] text-[#8a7a5a] mt-2">
+                    {currentPhoto.category}
+                  </p>
+                )}
+              </div>
+
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

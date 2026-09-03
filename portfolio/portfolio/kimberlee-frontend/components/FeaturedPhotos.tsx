@@ -1,112 +1,81 @@
 "use client";
-export default function FeaturedPhotos() {
-  return (
-    <section
-      style={{
-        background: "var(--bg-card)",
-        borderTop: "0.5px solid rgba(201,168,76,0.1)",
-        padding: "96px 0",
-      }}
-    >
-      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 48px" }}>
 
+import { useRef } from "react";
+import Link from "next/link";
+import { motion, useInView } from "motion/react";
+
+export default function FeaturedPhotos() {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "-60px" });
+
+  return (
+    <section ref={ref} className="bg-[#0a0805] py-28 sm:py-36">
+      <div className="max-w-7xl mx-auto px-6 sm:px-12 lg:px-20">
         {/* Header */}
-        <div style={{ marginBottom: 48 }}>
-          <div style={{
-            fontFamily: "var(--font-body)",
-            fontSize: 10, fontWeight: 500,
-            letterSpacing: "0.32em",
-            textTransform: "uppercase",
-            color: "var(--gold)",
-            display: "flex", alignItems: "center", gap: 14,
-            marginBottom: 20,
-          }}>
-            <span style={{ width: 28, height: "0.5px", background: "var(--gold)", display: "block" }} />
-            Featured
-          </div>
-          <h2 style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "clamp(36px, 4vw, 52px)",
-            fontWeight: 300,
-            color: "var(--text-primary)",
-            letterSpacing: "0.02em",
-          }}>
-            Selected <em style={{ color: "var(--gold)", fontStyle: "italic" }}>Works</em>
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          className="mb-16"
+        >
+          <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-light text-[#f5eed6] tracking-wide">
+            Selected{" "}
+            <em className="text-[#c9a84c] italic font-normal">Works</em>
           </h2>
-        </div>
+        </motion.div>
 
         {/* Two-up editorial layout */}
-        <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 12 }} className="featured-grid">
-          <div style={{ position: "relative", overflow: "hidden" }}>
+        <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-4">
+          {/* Large left image */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            className="relative overflow-hidden rounded-lg group"
+          >
             <img
               src="https://preview.redd.it/7ysnbxcdzd8g1.jpg?width=871&format=pjpg&auto=webp&s=a795747bb2110de9e6d9f64763dd710702095b53"
-              alt="Featured"
-              style={{ width: "100%", height: 700, objectFit: "cover", objectPosition: "center top", display: "block" }}
+              alt="Featured glamour series"
+              className="w-full h-[480px] lg:h-[700px] object-cover object-top group-hover:scale-[1.02] transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
             />
-            <div style={{
-              position: "absolute", bottom: 24, left: 24,
-              fontFamily: "var(--font-display)",
-              fontSize: 13, fontStyle: "italic",
-              color: "rgba(201,168,76,0.7)",
-              letterSpacing: "0.06em",
-            }}>
+            <span className="absolute bottom-6 left-6 font-display text-sm italic text-white/40 tracking-wide">
               Glamour Series
-            </div>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ flex: 1, overflow: "hidden" }}>
+            </span>
+          </motion.div>
+
+          {/* Right column: image + quote */}
+          <div className="flex flex-col gap-4">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.7, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="flex-1 overflow-hidden rounded-lg group"
+            >
               <img
                 src="https://preview.redd.it/5ro0ivenx6ea1.jpg?auto=webp&s=d6146b52b64cd1b88317fdfbeae8fc72ad279287"
-                alt="Featured 2"
-                style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block" }}
+                alt="Featured editorial"
+                className="w-full h-full object-cover object-top group-hover:scale-[1.02] transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
               />
-            </div>
-            <div style={{
-              padding: "28px 32px",
-              border: "0.5px solid rgba(201,168,76,0.15)",
-              background: "var(--bg-base)",
-              display: "flex", flexDirection: "column", justifyContent: "center",
-            }}>
-              <p style={{
-                fontFamily: "var(--font-display)",
-                fontSize: 22, fontStyle: "italic",
-                fontWeight: 300,
-                color: "var(--text-muted)",
-                lineHeight: 1.8,
-                letterSpacing: "0.03em",
-                marginBottom: 20,
-              }}>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.7, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="p-8 border border-[#c9a84c]/10 rounded-lg flex flex-col justify-center"
+            >
+              <p className="font-display text-xl sm:text-2xl italic font-light text-[#8a7a5a] leading-relaxed tracking-wide mb-6">
                 &ldquo;Every frame is a moment frozen in gold.&rdquo;
               </p>
-              <a href="#gallery" style={{
-                fontFamily: "var(--font-body)",
-                fontSize: 10, fontWeight: 500,
-                letterSpacing: "0.22em",
-                textTransform: "uppercase",
-                color: "var(--bg-base)",
-                background: "var(--gold)",
-                padding: "11px 26px",
-                display: "inline-block",
-                width: "fit-content",
-                textDecoration: "none",
-                borderRadius: 1,
-                transition: "background 0.2s",
-              }}
-              onMouseEnter={(e) => ((e.target as HTMLElement).style.background = "var(--gold-light)")}
-              onMouseLeave={(e) => ((e.target as HTMLElement).style.background = "var(--gold)")}
+              <Link
+                href="/gallery"
+                className="self-start text-[10px] font-medium uppercase tracking-[0.2em] text-[#070503] bg-[#c9a84c] hover:bg-[#e8d5a3] px-6 py-2.5 rounded-sm transition-colors duration-300"
               >
                 View Gallery
-              </a>
-            </div>
+              </Link>
+            </motion.div>
           </div>
         </div>
       </div>
-
-      <style>{`
-        @media (max-width: 768px) {
-          .featured-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
     </section>
   );
 }
